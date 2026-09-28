@@ -2,17 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 
 import {
   FaPython,
-  FaDatabase,
   FaChartBar,
   FaTable,
-  FaFileExcel,
-  FaCode,
   FaProjectDiagram,
   FaSearch,
   FaCogs,
   FaChartLine,
-  FaBrain,
-  FaFilter,
 } from "react-icons/fa";
 
 import {

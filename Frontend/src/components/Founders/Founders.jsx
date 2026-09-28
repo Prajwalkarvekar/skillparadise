@@ -1,4 +1,3 @@
-import React from "react";
 
 import deepakSir from "../../assets/Founders/Deepak Sir Headshot.png";
 import sagarSir from "../../assets/Founders/Sagar Sir headshot.png";

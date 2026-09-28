@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import express from "express";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { pathToFileURL } from "node:url";
 
 dotenv.config();
 
@@ -21,6 +22,15 @@ app.use(cors({
   },
 }));
 app.use(express.json({ limit: "20kb" }));
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  if (["POST", "PATCH"].includes(req.method) &&
+      (!req.body || Array.isArray(req.body) || typeof req.body !== "object" ||
+       Object.values(req.body).some(value => typeof value !== "string"))) {
+    return res.status(400).json({ message: "Please provide text values in a JSON object." });
+  }
+  next();
+});
 
 const enquirySchema = new mongoose.Schema({
   firstName: { type: String, trim: true, maxlength: 60 },
@@ -46,7 +56,7 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true, lowercase: true },
   email: { type: String, required: true, unique: true, trim: true, lowercase: true },
   password: { type: String, required: true, select: false },
-  roleName: { type: String, enum: ["ADMIN", "SUPERADMIN"], default: "SUPERADMIN" },
+  roleName: { type: String, enum: ["ADMIN", "SUPERADMIN", "STUDENT"], default: "STUDENT" },
   companyCode: { type: String, default: "skillparadise", lowercase: true },
   phoneNumber: { type: String, trim: true },
   course: { type: String, trim: true },
@@ -65,12 +75,17 @@ function validateLead({ firstName, email, phone, course, message }) {
   return null;
 }
 
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   try {
     const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
     if (!token) return res.status(401).json({ message: "Authentication token is required." });
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (!mongoose.isValidObjectId(payload.userId)) return res.status(401).json({ message: "Invalid account." });
+    const user = await User.findById(payload.userId);
+    if (!user) return res.status(401).json({ message: "User account no longer exists." });
+    if (!["ADMIN", "SUPERADMIN"].includes(user.roleName)) return res.status(403).json({ message: "Admin access is required." });
     req.userId = payload.userId;
+    req.admin = user;
     return next();
   } catch {
     return res.status(401).json({ message: "Your session is invalid or expired. Please log in again." });
@@ -143,6 +158,7 @@ app.post("/api/Auth/login", async (req, res, next) => {
     if (!user || !(await bcrypt.compare(req.body.password || "", user.password))) {
       return res.status(401).json({ message: "Invalid username or password." });
     }
+    if (!["ADMIN", "SUPERADMIN"].includes(user.roleName)) return res.status(403).json({ message: "Admin access is required." });
     const token = jwt.sign({ userId: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: "8h" });
     return res.json({ data: { ...publicUser(user), token } });
   } catch (error) { return next(error); }
@@ -178,7 +194,7 @@ app.post("/api/Auth/register-student", requireAdmin, async (req, res, next) => {
   } catch (error) { if (error?.code === 11000) return res.status(409).json({ message: "Username or email is already registered." }); return next(error); }
 });
 
-app.post("/api/leads/corporate-training", async (req, res, next) => {
+app.post(["/api/leads/corporate-training", "/api/leads/institutional-collaboration"], async (req, res, next) => {
   try {
     const fields = { name: 60, companyName: 120, email: 120, phone: 20, requirements: 1800 };
     const details = {};
@@ -195,10 +211,11 @@ app.post("/api/leads/corporate-training", async (req, res, next) => {
     const [firstName, ...lastName] = details.name.split(/\s+/);
     await Enquiry.create(toEnquiry({
       firstName, lastName: lastName.join(" "), email: details.email, phone: details.phone,
-      course: "Corporate Training", source: "Corporate Training Enquiry",
+      course: req.path.endsWith("institutional-collaboration") ? "Institutional Collaboration" : "Corporate Training",
+      source: req.path.endsWith("institutional-collaboration") ? "Institutional Collaboration Enquiry" : "Corporate Training Enquiry",
       message: `Company / Organization: ${details.companyName}\n\nTraining requirements: ${details.requirements}`,
     }));
-    return res.status(201).json({ message: "Your corporate training enquiry has been received." });
+    return res.status(201).json({ message: "Your enquiry has been received." });
   } catch (error) { return next(error); }
 });
 
@@ -225,10 +242,11 @@ app.post("/api/leads/request-call", async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
-// Dashboard APIs: send x-admin-api-key with the configured ADMIN_API_KEY.
+// Dashboard APIs require an admin Bearer token and enforce company access.
 app.get("/api/ContactUs/company/:companyCode", requireAdmin, async (req, res, next) => {
   try {
-    const enquiries = await Enquiry.find({ companyCode: req.params.companyCode.toLowerCase() }).sort({ createdAt: -1 }).lean();
+    if (req.params.companyCode.toLowerCase() !== req.admin.companyCode) return res.status(403).json({ message: "Company access is not allowed." });
+    const enquiries = await Enquiry.find({ companyCode: req.admin.companyCode }).sort({ createdAt: -1 }).lean();
     return res.json({ data: enquiries });
   } catch (error) { return next(error); }
 });
@@ -238,15 +256,16 @@ app.patch("/api/ContactUs/:id/status", requireAdmin, async (req, res, next) => {
     if (!["New", "Contacted", "Follow-up", "Closed"].includes(req.body.status)) {
       return res.status(400).json({ message: "Invalid status." });
     }
-    const enquiry = await Enquiry.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid enquiry ID." });
+    const enquiry = await Enquiry.findOneAndUpdate({ _id: req.params.id, companyCode: req.admin.companyCode }, { status: req.body.status }, { new: true, runValidators: true });
     if (!enquiry) return res.status(404).json({ message: "Enquiry not found." });
     return res.json({ data: enquiry, message: "Enquiry status updated." });
   } catch (error) { return next(error); }
 });
 
 // Old dashboard-compatible aliases.
-app.get("/api/leads", requireAdmin, async (_req, res, next) => {
-  try { return res.json({ leads: await Enquiry.find().sort({ createdAt: -1 }).lean() }); } catch (error) { return next(error); }
+app.get("/api/leads", requireAdmin, async (req, res, next) => {
+  try { return res.json({ leads: await Enquiry.find({ companyCode: req.admin.companyCode }).sort({ createdAt: -1 }).lean() }); } catch (error) { return next(error); }
 });
 
 async function ensureAdmin() {
@@ -274,14 +293,34 @@ async function ensureAdmin() {
 }
 
 app.use((error, _req, res, _next) => {
-  console.error(error);
+  if (error.type === "entity.parse.failed") return res.status(400).json({ message: "Invalid JSON body." });
+  if (error.type === "entity.too.large") return res.status(413).json({ message: "Request is too large." });
+  if (["ValidationError", "CastError"].includes(error.name)) return res.status(400).json({ message: "Please check field formats and maximum lengths." });
+  console.error(error.message);
   res.status(error.message === "Origin is not allowed by CORS" ? 403 : 500).json({ message: "Something went wrong. Please try again later." });
 });
 
-mongoose.connect(process.env.MONGODB_URI)
+export function validateConfiguration(env = process.env) {
+  for (const key of ["MONGODB_URI", "JWT_SECRET", "ADMIN_PASSWORD"]) {
+    if (!env[key]) throw new Error(`${key} is required.`);
+  }
+  if (env.NODE_ENV === "production") {
+    if (env.JWT_SECRET.length < 32 || /replace|change|your-secret/i.test(env.JWT_SECRET)) throw new Error("Use a random JWT_SECRET of at least 32 characters.");
+    if (env.ADMIN_PASSWORD.length < 12 || /^(admin|password|replace|change)/i.test(env.ADMIN_PASSWORD)) throw new Error("Set a strong production ADMIN_PASSWORD (at least 12 characters).");
+    if (env.RESET_ADMIN_ON_START === "true") throw new Error("Disable RESET_ADMIN_ON_START in production.");
+    if (!env.CLIENT_URLS || env.CLIENT_URLS.split(",").some(origin => { try { return new URL(origin.trim()).protocol !== "https:"; } catch { return true; } })) throw new Error("CLIENT_URLS must contain production HTTPS origins.");
+  }
+}
+
+export { app, User, Enquiry };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try { validateConfiguration(); } catch (error) { console.error(error.message); process.exit(1); }
+  mongoose.connect(process.env.MONGODB_URI)
   .then(ensureAdmin)
   .then(() => app.listen(port, () => console.log(`API running on http://localhost:${port}`)))
   .catch((error) => {
-    console.error("MongoDB connection failed:", error.message);
+    console.error("Backend startup failed:", error.message);
     process.exit(1);
   });
+}

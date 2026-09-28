@@ -45,6 +45,8 @@ function InstitutionalCollaboration() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,13 +57,20 @@ function InstitutionalCollaboration() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Backend / database integration will be added later.
-    console.log("Institutional enquiry:", formData);
-
-    setSubmitted(true);
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/leads/institutional-collaboration`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formData.personName, companyName: formData.institutionName, email: formData.email, phone: formData.phone, requirements: formData.requirements }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to submit your enquiry.");
+      setSubmitted(true);
+    } catch (error) { setSubmitError(error.message); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -362,7 +371,7 @@ function InstitutionalCollaboration() {
 
           <div className="grid gap-0 lg:grid-cols-4">
 
-            {collaborationSteps.map((step, index) => (
+            {collaborationSteps.map((step) => (
               <div
                 key={step.number}
                 className="relative border-t border-[#173873]/15 px-1 py-7 lg:border-l lg:px-7 lg:py-5 first:lg:border-l-0"
@@ -612,11 +621,13 @@ function InstitutionalCollaboration() {
 
 
                   {/* SUBMIT */}
+                  {submitError && <p role="alert" className="text-sm text-red-700">{submitError}</p>}
                   <button
                     type="submit"
+                    disabled={submitting}
                     className="group inline-flex items-center gap-3 bg-[#173873] px-6 py-3.5 text-xs font-bold uppercase tracking-[0.16em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#ff7417]"
                   >
-                    <span>Send Enquiry</span>
+                    <span>{submitting ? "Sending…" : "Send Enquiry"}</span>
 
                     <ArrowRight
                       size={16}

@@ -1,4 +1,3 @@
-import React from "react";
 
 import spLogo from "../../assets/logos/SP LOGO.svg";
 import deepakHeadshot from "../../assets/Founders/Deepak Sir Headshot.png";
@@ -441,6 +440,7 @@ const About = () => {
             FOUNDERS
         ========================================================== */}
         {/* Temporarily hidden — retain the section for future use. */}
+        {/* eslint-disable-next-line no-constant-binary-expression -- Founder section intentionally hidden. */}
         {false && (
         <section className="px-6 sm:px-10 lg:px-16 py-24 lg:py-32 bg-white">
           <div className="max-w-7xl mx-auto">

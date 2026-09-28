@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import logo from "../../assets/logos/SP LOGO White.svg";
 
 const courses = [
@@ -156,12 +156,13 @@ function BrochureModal({ isOpen, onClose }) {
     try {
       setIsDownloading(true);
 
-      /*
-       * Small delay gives the button a proper loading state.
-       * Later, your backend API call can be added here
-       * to save the candidate lead.
-       */
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      setErrors({});
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/leads/request-call`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: `${formData.firstName} ${formData.lastName}`.trim(), email: formData.email, phone: formData.phone, interestedCourse: formData.course, source: "Brochure Download" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to submit your details. Please try again.");
 
       const link = document.createElement("a");
 
@@ -195,7 +196,7 @@ function BrochureModal({ isOpen, onClose }) {
         onClose();
       }, 300);
     } catch (error) {
-      console.error("Brochure download failed:", error);
+      setErrors({ submit: error.message || "Unable to download brochure. Please try again." });
     } finally {
       setIsDownloading(false);
     }
@@ -1060,6 +1061,7 @@ function BrochureModal({ isOpen, onClose }) {
               {/* =================================================
                   DOWNLOAD BUTTON
                   ================================================= */}
+              {errors.submit && <p role="alert" className="mt-3 text-sm text-red-700">{errors.submit}</p>}
               <button
                 type="submit"
                 disabled={isDownloading}
