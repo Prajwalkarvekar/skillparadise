@@ -1,4 +1,8 @@
-# Performance verification ? 12 September 2026
+# Performance verification
+
+Latest: [28 September 2026 — courses/mobile/desktop and home](2026-09-28.md).
+
+## 12 September 2026
 
 Measured with Lighthouse 13.4.1 against the local **production build**, served by Vite preview at http://127.0.0.1:4173. Mobile uses default simulated throttling; desktop uses `--preset=desktop`. Audits run sequentially. The user's 25?30 development-server score is not directly comparable to these production measurements.
 

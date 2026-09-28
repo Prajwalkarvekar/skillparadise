@@ -392,6 +392,8 @@ function CourseCard({ course }) {
       <div className="relative h-[160px] shrink-0 overflow-hidden sm:h-[170px]">
         <img
           src={course.image}
+          srcSet={[480, 800, 1200].map(width => `${course.image.replace("w=1200", `w=${width}`)} ${width}w`).join(", ")}
+          sizes="(min-width: 1400px) 411px, (min-width: 1024px) calc((100vw - 160px) / 3), (min-width: 768px) calc((100vw - 100px) / 2), calc(100vw - 48px)"
           alt={course.title}
           className="
             h-full
@@ -403,6 +405,7 @@ function CourseCard({ course }) {
             group-hover:scale-105
           "
           loading="lazy"
+          decoding="async"
         />
 
         <div

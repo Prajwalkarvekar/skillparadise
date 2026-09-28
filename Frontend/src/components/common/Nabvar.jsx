@@ -327,6 +327,8 @@ function Navbar() {
             <img
               src={logo}
               alt="Skill Paradise"
+              width="4500"
+              height="1050"
               className="h-auto w-32 sm:w-36 lg:w-40 xl:w-44"
             />
           </Link>

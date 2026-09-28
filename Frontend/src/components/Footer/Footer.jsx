@@ -101,6 +101,10 @@ const Footer = () => {
               <img
                 src={logo}
                 alt="Skill Paradise"
+                width="4500"
+                height="1050"
+                loading="lazy"
+                decoding="async"
                 className="
                   h-11
                   w-auto
