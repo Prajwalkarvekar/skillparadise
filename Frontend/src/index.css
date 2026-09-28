@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  max-width: 100%;
+  /* Clip horizontal overflow without trapping sticky sections in a body scroller. */
+  overflow-x: clip;
+  background: #ffffff;
+  color: #0f172a;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button,
+a,
+input {
+  font: inherit;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 12s linear infinite;
+}
+
+.course-phase-stack .course-phase-card {
+  position: sticky;
+  top: 6rem;
+  margin-bottom: 1.25rem;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  transform-origin: center top;
+  transition:
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 500ms ease;
+}
+
+.course-phase-stack .course-phase-card:nth-child(1) {
+  z-index: 1;
+}
+
+.course-phase-stack .course-phase-card:nth-child(2) {
+  z-index: 2;
+}
+
+.course-phase-stack .course-phase-card:nth-child(3) {
+  z-index: 3;
+}
+
+.course-phase-stack .course-phase-card:nth-child(4) {
+  z-index: 4;
+}
+
+.course-phase-stack .course-phase-card:nth-child(5) {
+  z-index: 5;
+}
+
+.course-phase-stack .course-phase-card:nth-child(6) {
+  z-index: 6;
+}
+
+.course-phase-stack .course-phase-card:nth-child(7) {
+  z-index: 7;
+}
+
+.course-phase-stack .course-phase-card:nth-child(8) {
+  z-index: 8;
+}
+
+@media (max-width: 1023px) {
+  .course-phase-stack .course-phase-card {
+    position: relative;
+    top: auto;
+    margin-bottom: 0;
+  }
+}
+
+/* =========================================================
+   WHY CHOOSE US - FLOATING DOTS
+========================================================= */
+
+@keyframes whyDotFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  25% {
+    transform: translate3d(8px, -12px, 0);
+  }
+
+  50% {
+    transform: translate3d(-5px, -20px, 0);
+  }
+
+  75% {
+    transform: translate3d(-10px, -6px, 0);
+  }
+}
+
+.why-dot {
+  animation: whyDotFloat 8s ease-in-out infinite;
+}
+
+.why-dot-delay-1 {
+  animation-delay: -1.5s;
+}
+
+.why-dot-delay-2 {
+  animation-delay: -3s;
+}
+
+.why-dot-delay-3 {
+  animation-delay: -4.5s;
+}
+
+.why-dot-delay-4 {
+  animation-delay: -6s;
+}
+
+.why-dot-delay-5 {
+  animation-delay: -2.5s;
+}
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .why-dot {
+    animation: none;
+  }
+}

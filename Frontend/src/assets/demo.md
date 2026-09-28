@@ -1,0 +1,1 @@
+import studentImage from "../../../assets/hero-section-model.png";
